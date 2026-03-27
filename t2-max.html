@@ -1,0 +1,1172 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover, maximum-scale=1, user-scalable=no">
+<title>T2 Catch Game</title>
+<script src="https://bridge.max.ru/mobi-bridge.js"></script>
+<style>
+@import url('https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@400;600;700&display=swap');
+
+:root {
+  --black: #0A0A0A;
+  --black2: #141414;
+  --black3: #1E1E1E;
+  --white: #FFFFFF;
+  --magenta: #FF00FF;
+  --magenta-glow: rgba(255,0,255,0.3);
+  --lime: #BFFF00;
+  --lime-glow: rgba(191,255,0,0.3);
+  --blue: #0066FF;
+  --blue-glow: rgba(0,102,255,0.3);
+  --electric: #00CCFF;
+  --text-dim: rgba(255,255,255,0.5);
+  --text-muted: rgba(255,255,255,0.25);
+}
+
+*, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+html { overflow: hidden; height: 100%; }
+
+body {
+  background: var(--black);
+  color: var(--white);
+  font-family: 'Space Grotesk', -apple-system, sans-serif;
+  height: 100%;
+  overflow: hidden;
+  touch-action: none;
+  -webkit-user-select: none;
+  user-select: none;
+  overscroll-behavior: none;
+}
+
+.screen {
+  position: absolute;
+  inset: 0;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  opacity: 0;
+  pointer-events: none;
+  transition: opacity 0.4s ease;
+  padding: env(safe-area-inset-top, 20px) 24px env(safe-area-inset-bottom, 20px);
+}
+.screen.active {
+  opacity: 1;
+  pointer-events: auto;
+}
+.screen.scrollable {
+  overflow-y: auto;
+  overflow-x: hidden;
+  justify-content: flex-start;
+  -webkit-overflow-scrolling: touch;
+  touch-action: pan-y;
+}
+
+#mainScreen {
+  background: var(--black);
+  gap: 0;
+  justify-content: flex-start;
+  padding-top: calc(env(safe-area-inset-top, 20px) + 60px);
+}
+
+.main-logo {
+  width: 120px;
+  height: auto;
+  margin-bottom: 16px;
+}
+
+.main-t2 {
+  font-size: 72px;
+  font-weight: 700;
+  letter-spacing: -3px;
+  line-height: 1;
+  position: relative;
+}
+.main-t2 .t-letter { color: var(--white); }
+.main-t2 .two-letter { color: var(--white); }
+.main-t2 .pixel {
+  display: inline-block;
+  width: 12px;
+  height: 12px;
+  background: var(--magenta);
+  margin-left: 2px;
+  vertical-align: super;
+  border-radius: 1px;
+  box-shadow: 0 0 20px var(--magenta-glow);
+}
+
+.main-tagline {
+  font-size: 13px;
+  color: var(--text-dim);
+  letter-spacing: 3px;
+  text-transform: uppercase;
+  margin-top: 8px;
+  margin-bottom: 48px;
+}
+
+.main-title {
+  font-size: 28px;
+  font-weight: 700;
+  text-align: center;
+  line-height: 1.2;
+  margin-bottom: 12px;
+}
+.main-title em {
+  font-style: normal;
+  color: var(--magenta);
+}
+
+.main-desc {
+  font-size: 14px;
+  color: var(--text-dim);
+  text-align: center;
+  line-height: 1.6;
+  max-width: 300px;
+  margin-bottom: 40px;
+}
+
+.btn-primary {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 100%;
+  max-width: 320px;
+  padding: 16px 32px;
+  background: var(--lime);
+  color: var(--black);
+  font-family: inherit;
+  font-size: 16px;
+  font-weight: 700;
+  border: none;
+  border-radius: 14px;
+  cursor: pointer;
+  transition: transform 0.15s, box-shadow 0.15s;
+  box-shadow: 0 4px 24px var(--lime-glow);
+  -webkit-tap-highlight-color: transparent;
+}
+.btn-primary:active { transform: scale(0.97); }
+
+.btn-secondary {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 100%;
+  max-width: 320px;
+  padding: 14px 32px;
+  background: transparent;
+  color: var(--white);
+  font-family: inherit;
+  font-size: 14px;
+  font-weight: 600;
+  border: 1px solid rgba(255,255,255,0.15);
+  border-radius: 14px;
+  cursor: pointer;
+  margin-top: 12px;
+  transition: background 0.2s;
+  -webkit-tap-highlight-color: transparent;
+}
+.btn-secondary:active { background: rgba(255,255,255,0.05); }
+
+.main-attempts {
+  margin-top: 20px;
+  font-size: 13px;
+  color: var(--text-dim);
+}
+.main-attempts span { color: var(--lime); font-weight: 700; }
+
+#gameScreen {
+  padding: 0;
+  background: var(--black);
+}
+
+.game-hud {
+  position: absolute;
+  top: 0;
+  left: 0;
+  right: 0;
+  z-index: 10;
+  padding: calc(env(safe-area-inset-top, 20px) + 8px) 20px 8px;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  background: linear-gradient(to bottom, rgba(10,10,10,0.95) 60%, transparent);
+}
+
+.hud-score {
+  font-size: 28px;
+  font-weight: 700;
+  font-variant-numeric: tabular-nums;
+}
+.hud-score span { color: var(--magenta); }
+
+.hud-timer {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  font-size: 18px;
+  font-weight: 600;
+  font-variant-numeric: tabular-nums;
+}
+.hud-timer-icon {
+  width: 18px;
+  height: 18px;
+  border: 2px solid var(--white);
+  border-radius: 50%;
+  position: relative;
+}
+.hud-timer-icon::after {
+  content: '';
+  position: absolute;
+  top: 3px;
+  left: 50%;
+  width: 2px;
+  height: 5px;
+  background: var(--white);
+  transform-origin: bottom center;
+}
+
+.hud-combo {
+  font-size: 14px;
+  font-weight: 700;
+  color: var(--lime);
+  opacity: 0;
+  transition: opacity 0.2s;
+}
+.hud-combo.visible { opacity: 1; }
+
+.game-canvas {
+  position: absolute;
+  inset: 0;
+  overflow: hidden;
+}
+
+.game-object {
+  position: absolute;
+  width: 56px;
+  height: 56px;
+  border-radius: 14px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 28px;
+  cursor: pointer;
+  transition: transform 0.1s;
+  -webkit-tap-highlight-color: transparent;
+  will-change: transform;
+}
+.game-object:active { transform: scale(0.85) !important; }
+
+.game-object.good {
+  background: rgba(255,0,255,0.15);
+  border: 2px solid var(--magenta);
+  box-shadow: 0 0 16px var(--magenta-glow);
+}
+.game-object.bonus {
+  background: rgba(191,255,0,0.15);
+  border: 2px solid var(--lime);
+  box-shadow: 0 0 16px var(--lime-glow);
+}
+.game-object.bad {
+  background: rgba(255,255,255,0.05);
+  border: 2px solid rgba(255,255,255,0.15);
+}
+.game-object.caught { animation: catchPop 0.3s ease forwards; }
+.game-object.missed { animation: missShake 0.3s ease forwards; }
+
+@keyframes catchPop {
+  0% { transform: scale(1); opacity: 1; }
+  50% { transform: scale(1.4); opacity: 0.6; }
+  100% { transform: scale(0); opacity: 0; }
+}
+@keyframes missShake {
+  0% { transform: translateX(0); opacity: 1; }
+  25% { transform: translateX(-8px); }
+  50% { transform: translateX(8px); }
+  75% { transform: translateX(-4px); }
+  100% { transform: translateX(0); opacity: 0.3; }
+}
+
+.score-popup {
+  position: absolute;
+  font-size: 20px;
+  font-weight: 700;
+  pointer-events: none;
+  animation: scoreFloat 0.8s ease forwards;
+  z-index: 20;
+}
+.score-popup.positive { color: var(--lime); }
+.score-popup.negative { color: #FF4444; }
+
+@keyframes scoreFloat {
+  0% { opacity: 1; transform: translateY(0) scale(1); }
+  100% { opacity: 0; transform: translateY(-60px) scale(0.7); }
+}
+
+.countdown-overlay {
+  position: absolute;
+  inset: 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: rgba(10,10,10,0.85);
+  z-index: 50;
+  opacity: 0;
+  pointer-events: none;
+  transition: opacity 0.2s;
+}
+.countdown-overlay.active { opacity: 1; pointer-events: auto; }
+
+.countdown-num {
+  font-size: 120px;
+  font-weight: 700;
+  color: var(--white);
+  animation: countPulse 0.6s ease;
+}
+@keyframes countPulse {
+  0% { transform: scale(0.5); opacity: 0; }
+  50% { transform: scale(1.2); }
+  100% { transform: scale(1); opacity: 1; }
+}
+
+#resultScreen {
+  background: var(--black);
+  gap: 0;
+  justify-content: flex-start;
+  padding-top: calc(env(safe-area-inset-top, 20px) + 40px);
+  padding-bottom: calc(env(safe-area-inset-bottom, 20px) + 40px);
+}
+
+.result-logo-container {
+  position: relative;
+  width: 200px;
+  height: 200px;
+  margin-bottom: 24px;
+}
+
+.result-logo-grid {
+  width: 100%;
+  height: 100%;
+  display: grid;
+  grid-template-columns: repeat(10, 1fr);
+  grid-template-rows: repeat(10, 1fr);
+  gap: 2px;
+}
+.result-logo-grid .pixel-cell {
+  border-radius: 2px;
+  opacity: 0;
+  transform: scale(0);
+  transition: opacity 0.3s ease, transform 0.3s ease, background 0.3s ease;
+}
+.result-logo-grid .pixel-cell.revealed {
+  opacity: 1;
+  transform: scale(1);
+}
+
+.result-score-label {
+  font-size: 13px;
+  color: var(--text-dim);
+  text-transform: uppercase;
+  letter-spacing: 2px;
+  margin-bottom: 4px;
+}
+
+.result-score {
+  font-size: 56px;
+  font-weight: 700;
+  line-height: 1;
+  margin-bottom: 4px;
+}
+.result-score span { color: var(--magenta); }
+
+.result-best {
+  font-size: 13px;
+  color: var(--text-dim);
+  margin-bottom: 32px;
+}
+
+.result-stats {
+  display: flex;
+  gap: 24px;
+  margin-bottom: 32px;
+}
+.result-stat { text-align: center; }
+.result-stat-value {
+  font-size: 24px;
+  font-weight: 700;
+  color: var(--lime);
+}
+.result-stat-label {
+  font-size: 11px;
+  color: var(--text-dim);
+  text-transform: uppercase;
+  letter-spacing: 1px;
+  margin-top: 2px;
+}
+
+.result-rank {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  background: var(--black2);
+  border: 1px solid rgba(255,255,255,0.08);
+  border-radius: 12px;
+  padding: 12px 20px;
+  margin-bottom: 32px;
+  width: 100%;
+  max-width: 320px;
+}
+.result-rank-pos {
+  font-size: 24px;
+  font-weight: 700;
+  color: var(--magenta);
+  min-width: 40px;
+}
+.result-rank-text {
+  font-size: 13px;
+  color: var(--text-dim);
+}
+
+.result-buttons {
+  width: 100%;
+  max-width: 320px;
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+
+.btn-invite {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  width: 100%;
+  padding: 15px 24px;
+  background: var(--blue);
+  color: var(--white);
+  font-family: inherit;
+  font-size: 15px;
+  font-weight: 700;
+  border: none;
+  border-radius: 14px;
+  cursor: pointer;
+  box-shadow: 0 4px 20px var(--blue-glow);
+  -webkit-tap-highlight-color: transparent;
+}
+.btn-invite:active { transform: scale(0.97); }
+
+.result-offer {
+  width: 100%;
+  max-width: 320px;
+  background: linear-gradient(135deg, rgba(255,0,255,0.1), rgba(0,102,255,0.1));
+  border: 1px solid rgba(255,0,255,0.2);
+  border-radius: 16px;
+  padding: 16px 20px;
+  margin-top: 20px;
+  text-align: center;
+}
+.result-offer-title {
+  font-size: 15px;
+  font-weight: 700;
+  margin-bottom: 4px;
+}
+.result-offer-desc {
+  font-size: 12px;
+  color: var(--text-dim);
+  line-height: 1.5;
+}
+.result-offer-amount {
+  font-size: 28px;
+  font-weight: 700;
+  color: var(--lime);
+  margin: 8px 0 4px;
+}
+
+#leaderScreen {
+  background: var(--black);
+  gap: 0;
+  justify-content: flex-start;
+  padding-top: calc(env(safe-area-inset-top, 20px) + 56px);
+}
+
+.leader-header {
+  display: flex;
+  align-items: center;
+  width: 100%;
+  max-width: 360px;
+  margin-bottom: 24px;
+}
+.leader-back {
+  width: 40px;
+  height: 40px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: var(--black2);
+  border-radius: 12px;
+  color: var(--white);
+  font-size: 18px;
+  cursor: pointer;
+  border: none;
+  font-family: inherit;
+  -webkit-tap-highlight-color: transparent;
+}
+.leader-title {
+  flex: 1;
+  text-align: center;
+  font-size: 18px;
+  font-weight: 700;
+  margin-right: 40px;
+}
+
+.leader-podium {
+  display: flex;
+  align-items: flex-end;
+  gap: 12px;
+  margin-bottom: 28px;
+}
+.podium-item {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 6px;
+}
+.podium-avatar {
+  width: 48px;
+  height: 48px;
+  border-radius: 50%;
+  background: var(--black3);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 20px;
+  font-weight: 700;
+  border: 2px solid rgba(255,255,255,0.1);
+}
+.podium-item:nth-child(2) .podium-avatar {
+  width: 64px;
+  height: 64px;
+  font-size: 24px;
+  border-color: var(--magenta);
+  box-shadow: 0 0 20px var(--magenta-glow);
+}
+.podium-name {
+  font-size: 12px;
+  color: var(--text-dim);
+  max-width: 70px;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.podium-score { font-size: 14px; font-weight: 700; }
+.podium-badge { font-size: 16px; }
+
+.leader-list {
+  width: 100%;
+  max-width: 360px;
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  overflow-y: auto;
+  max-height: 40vh;
+  padding-bottom: 20px;
+}
+.leader-row {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  background: var(--black2);
+  border-radius: 12px;
+  padding: 12px 16px;
+  border: 1px solid rgba(255,255,255,0.04);
+}
+.leader-row.me {
+  border-color: var(--magenta);
+  background: rgba(255,0,255,0.05);
+}
+.leader-pos {
+  font-size: 14px;
+  font-weight: 700;
+  color: var(--text-dim);
+  min-width: 24px;
+}
+.leader-row.me .leader-pos { color: var(--magenta); }
+.leader-avatar-sm {
+  width: 36px;
+  height: 36px;
+  border-radius: 50%;
+  background: var(--black3);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 14px;
+}
+.leader-name { flex: 1; font-size: 14px; font-weight: 600; }
+.leader-score-sm {
+  font-size: 14px;
+  font-weight: 700;
+  color: var(--text-dim);
+}
+.leader-t2-badge {
+  font-size: 9px;
+  background: var(--magenta);
+  color: var(--white);
+  padding: 2px 6px;
+  border-radius: 4px;
+  font-weight: 700;
+  letter-spacing: 0.5px;
+}
+
+.leader-footer {
+  margin-top: 20px;
+  width: 100%;
+  max-width: 360px;
+}
+
+body::before {
+  content: '';
+  position: fixed;
+  inset: 0;
+  background-image:
+    linear-gradient(rgba(255,0,255,0.02) 1px, transparent 1px),
+    linear-gradient(90deg, rgba(255,0,255,0.02) 1px, transparent 1px);
+  background-size: 32px 32px;
+  pointer-events: none;
+  z-index: 0;
+}
+
+.booster-indicator {
+  position: absolute;
+  top: calc(env(safe-area-inset-top, 20px) + 56px);
+  left: 50%;
+  transform: translateX(-50%);
+  background: rgba(191,255,0,0.15);
+  border: 1px solid var(--lime);
+  border-radius: 20px;
+  padding: 4px 14px;
+  font-size: 12px;
+  font-weight: 700;
+  color: var(--lime);
+  z-index: 15;
+  display: none;
+  white-space: nowrap;
+}
+.booster-indicator.visible { display: flex; align-items: center; gap: 4px; }
+</style>
+</head>
+<body>
+
+<!-- MAIN SCREEN -->
+<div class="screen active" id="mainScreen">
+  <div class="main-t2">
+    <span class="t-letter">t</span><span class="two-letter">2</span><span class="pixel"></span>
+  </div>
+  <div class="main-tagline">Другие правила</div>
+  <div class="main-title">Лови <em>бонусы</em>,<br>зови друзей</div>
+  <div class="main-desc">Тапай по объектам T2, избегай обманок и&nbsp;набирай очки. Пригласи друга&nbsp;— получи бустер&nbsp;и&nbsp;2000&nbsp;₽.</div>
+  <button class="btn-primary" id="btnPlay">Играть</button>
+  <button class="btn-secondary" id="btnLeaderFromMain">Рейтинг</button>
+  <div class="main-attempts">Попыток сегодня: <span id="attemptsLeft">3</span> из 3</div>
+</div>
+
+<!-- GAME SCREEN -->
+<div class="screen" id="gameScreen">
+  <div class="game-hud">
+    <div class="hud-score"><span id="hudScore">0</span></div>
+    <div class="hud-combo" id="hudCombo">x2 COMBO</div>
+    <div class="hud-timer">
+      <div class="hud-timer-icon"></div>
+      <span id="hudTimer">30</span>
+    </div>
+  </div>
+  <div class="booster-indicator" id="boosterInd">⚡ x2 активен</div>
+  <div class="game-canvas" id="gameCanvas"></div>
+  <div class="countdown-overlay" id="countdown">
+    <div class="countdown-num" id="countdownNum">3</div>
+  </div>
+</div>
+
+<!-- RESULT SCREEN -->
+<div class="screen scrollable" id="resultScreen">
+  <div class="result-logo-container">
+    <div class="result-logo-grid" id="logoGrid"></div>
+  </div>
+  <div class="result-score-label">Твой счёт</div>
+  <div class="result-score"><span id="finalScore">0</span></div>
+  <div class="result-best">Лучший: <span id="bestScore">0</span></div>
+  <div class="result-stats">
+    <div class="result-stat">
+      <div class="result-stat-value" id="statCaught">0</div>
+      <div class="result-stat-label">Поймано</div>
+    </div>
+    <div class="result-stat">
+      <div class="result-stat-value" id="statCombo">0</div>
+      <div class="result-stat-label">Макс комбо</div>
+    </div>
+    <div class="result-stat">
+      <div class="result-stat-value" id="statMissed">0</div>
+      <div class="result-stat-label">Промахов</div>
+    </div>
+  </div>
+  <div class="result-rank">
+    <div class="result-rank-pos" id="rankPos">#4</div>
+    <div class="result-rank-text">Место в рейтинге.<br>Пригласи друга, чтобы подняться выше!</div>
+  </div>
+  <div class="result-buttons">
+    <button class="btn-invite" id="btnInvite">📩 Позвать друга (+1 попытка)</button>
+    <button class="btn-primary" id="btnPlayAgain">Играть ещё</button>
+    <button class="btn-secondary" id="btnLeaderFromResult">Рейтинг</button>
+  </div>
+  <div class="result-offer">
+    <div class="result-offer-title">Приведи друга в T2</div>
+    <div class="result-offer-amount">2 000 ₽</div>
+    <div class="result-offer-desc">Каждый из вас получит бонус при подключении</div>
+  </div>
+</div>
+
+<!-- LEADERBOARD SCREEN -->
+<div class="screen scrollable" id="leaderScreen">
+  <div class="leader-header">
+    <button class="leader-back" id="btnBackFromLeader">←</button>
+    <div class="leader-title">Рейтинг</div>
+  </div>
+  <div class="leader-podium" id="podium"></div>
+  <div class="leader-list" id="leaderList"></div>
+  <div class="leader-footer">
+    <button class="btn-invite" id="btnInviteFromLeader">📩 Позвать друга (+1 попытка)</button>
+  </div>
+</div>
+
+<script>
+// ============================================================
+// MAX BRIDGE INIT
+// ============================================================
+let _userId = null;
+let _userName = null;
+let _botNick = 'T2_dem_bot'; // ← замени на ник бота T2 в MAX
+
+(function initMAX() {
+  const mb = window.MaxBridge;
+  if (!mb) return;
+  try { mb.ready(); } catch(e) {}
+  try { mb.expand(); } catch(e) {}
+  try { if (typeof mb.requestFullscreen === 'function') mb.requestFullscreen(); } catch(e) {}
+  try { if (typeof mb.disableVerticalSwipes === 'function') mb.disableVerticalSwipes(); } catch(e) {}
+
+  // Получаем userId и имя из MaxBridge
+  try {
+    const user = mb.initDataUnsafe?.user;
+    if (user) {
+      _userId = String(user.id || user.user_id || '');
+      _userName = user.name || user.first_name || user.username || 'Игрок';
+    }
+  } catch(e) {}
+
+  // Fallback — анонимный ID
+  if (!_userId) {
+    let aid = localStorage.getItem('t2_anon_id');
+    if (!aid) { aid = 'anon_' + Math.random().toString(36).slice(2); localStorage.setItem('t2_anon_id', aid); }
+    _userId = aid;
+    _userName = 'Игрок';
+  }
+})();
+
+// ============================================================
+// STATE
+// ============================================================
+let currentScreen = 'mainScreen';
+let score = 0;
+let timeLeft = 30;
+let combo = 0;
+let maxCombo = 0;
+let caught = 0;
+let missed = 0;
+let attempts = 3;
+let bestScore = parseInt(localStorage.getItem('t2_best') || '0');
+let hasBooster = false;
+let gameRunning = false;
+let gameTimer = null;
+let spawnTimer = null;
+let objectId = 0;
+let previousScreen = 'mainScreen';
+
+const leaderboard = [
+  { name: 'Алиса', score: 1240, t2: true },
+  { name: 'Максим', score: 980, t2: true },
+  { name: 'Дарья', score: 870, t2: false },
+  { name: _userName || 'Вы', score: bestScore, t2: true, me: true },
+  { name: 'Артём', score: 650, t2: true },
+  { name: 'Катя', score: 590, t2: false },
+  { name: 'Дмитрий', score: 520, t2: true },
+  { name: 'Настя', score: 480, t2: false },
+  { name: 'Иван', score: 410, t2: true },
+  { name: 'Олег', score: 350, t2: false },
+];
+
+const T2_LOGO = [
+  [0,1,1,1,1,0,0,0,0,0],
+  [0,0,1,0,0,0,0,0,0,0],
+  [0,0,1,0,0,1,1,1,0,0],
+  [0,0,1,0,1,0,0,0,1,0],
+  [0,0,1,0,0,0,0,0,1,0],
+  [0,0,0,0,0,0,0,1,0,0],
+  [0,0,0,0,0,0,1,0,0,0],
+  [0,0,0,0,0,1,0,0,0,0],
+  [0,0,0,0,1,0,0,0,0,0],
+  [0,0,0,0,1,1,1,1,1,2],
+];
+
+// ============================================================
+// NAVIGATION
+// ============================================================
+function showScreen(id) {
+  document.querySelectorAll('.screen').forEach(s => s.classList.remove('active'));
+  document.getElementById(id).classList.add('active');
+  previousScreen = currentScreen;
+  currentScreen = id;
+}
+
+// ============================================================
+// GAME OBJECTS
+// ============================================================
+const GOOD_ITEMS = ['💎','⭐','🎯','🔥','💰','🎁'];
+const BONUS_ITEMS = ['👑'];
+const BAD_ITEMS = ['💣','🚫','❌','☠️'];
+
+function spawnObject() {
+  if (!gameRunning) return;
+  const canvas = document.getElementById('gameCanvas');
+  const w = canvas.clientWidth;
+  const h = canvas.clientHeight;
+
+  const rand = Math.random();
+  let type, emoji, cls;
+  if (rand < 0.15) {
+    type = 'bad'; emoji = BAD_ITEMS[Math.floor(Math.random()*BAD_ITEMS.length)]; cls = 'bad';
+  } else if (rand < 0.22) {
+    type = 'bonus'; emoji = BONUS_ITEMS[0]; cls = 'bonus';
+  } else {
+    type = 'good'; emoji = GOOD_ITEMS[Math.floor(Math.random()*GOOD_ITEMS.length)]; cls = 'good';
+  }
+
+  const obj = document.createElement('div');
+  obj.className = `game-object ${cls}`;
+  obj.textContent = emoji;
+  obj.dataset.type = type;
+  obj.dataset.id = ++objectId;
+
+  const x = 20 + Math.random() * (w - 76);
+  const y = 80 + Math.random() * (h - 160);
+  obj.style.left = x + 'px';
+  obj.style.top = y + 'px';
+  obj.style.transform = 'scale(0)';
+
+  canvas.appendChild(obj);
+  requestAnimationFrame(() => { obj.style.transform = 'scale(1)'; });
+
+  obj.addEventListener('pointerdown', (e) => {
+    e.preventDefault();
+    e.stopPropagation();
+    handleTap(obj, type, x, y);
+  }, { passive: false });
+
+  const lifetime = 1800 - Math.min(timeLeft < 15 ? 600 : 0, 600);
+  setTimeout(() => {
+    if (obj.parentNode && !obj.dataset.tapped) {
+      obj.style.opacity = '0';
+      obj.style.transform = 'scale(0.5)';
+      setTimeout(() => obj.remove(), 200);
+      if (type === 'good' || type === 'bonus') {
+        missed++;
+        combo = 0;
+        updateHUD();
+      }
+    }
+  }, lifetime);
+}
+
+function handleTap(obj, type, x, y) {
+  if (obj.dataset.tapped) return;
+  obj.dataset.tapped = '1';
+
+  if (type === 'good') {
+    combo++;
+    if (combo > maxCombo) maxCombo = combo;
+    const multiplier = hasBooster ? 2 : 1;
+    const comboBonus = combo >= 5 ? 3 : combo >= 3 ? 2 : 1;
+    const pts = 10 * comboBonus * multiplier;
+    score += pts;
+    caught++;
+    obj.classList.add('caught');
+    showScorePopup(x, y, `+${pts}`, 'positive');
+  } else if (type === 'bonus') {
+    combo++;
+    if (combo > maxCombo) maxCombo = combo;
+    const pts = 50 * (hasBooster ? 2 : 1);
+    score += pts;
+    caught++;
+    obj.classList.add('caught');
+    showScorePopup(x, y, `+${pts}`, 'positive');
+  } else {
+    combo = 0;
+    score = Math.max(0, score - 20);
+    obj.classList.add('missed');
+    showScorePopup(x, y, '-20', 'negative');
+    document.getElementById('gameCanvas').style.boxShadow = 'inset 0 0 60px rgba(255,0,0,0.3)';
+    setTimeout(() => { document.getElementById('gameCanvas').style.boxShadow = ''; }, 200);
+  }
+
+  updateHUD();
+  setTimeout(() => obj.remove(), 300);
+}
+
+function showScorePopup(x, y, text, cls) {
+  const popup = document.createElement('div');
+  popup.className = `score-popup ${cls}`;
+  popup.textContent = text;
+  popup.style.left = x + 'px';
+  popup.style.top = (y - 10) + 'px';
+  document.getElementById('gameCanvas').appendChild(popup);
+  setTimeout(() => popup.remove(), 800);
+}
+
+function updateHUD() {
+  document.getElementById('hudScore').textContent = score;
+  const comboEl = document.getElementById('hudCombo');
+  if (combo >= 3) {
+    comboEl.textContent = `x${combo} COMBO`;
+    comboEl.classList.add('visible');
+  } else {
+    comboEl.classList.remove('visible');
+  }
+}
+
+// ============================================================
+// GAME FLOW
+// ============================================================
+function startCountdown() {
+  showScreen('gameScreen');
+  const overlay = document.getElementById('countdown');
+  const numEl = document.getElementById('countdownNum');
+  overlay.classList.add('active');
+
+  let count = 3;
+  numEl.textContent = count;
+
+  const interval = setInterval(() => {
+    count--;
+    if (count > 0) {
+      numEl.textContent = count;
+      numEl.style.animation = 'none';
+      void numEl.offsetWidth;
+      numEl.style.animation = 'countPulse 0.6s ease';
+    } else {
+      clearInterval(interval);
+      overlay.classList.remove('active');
+      startGame();
+    }
+  }, 700);
+}
+
+function startGame() {
+  score = 0; timeLeft = 30; combo = 0; maxCombo = 0;
+  caught = 0; missed = 0; gameRunning = true; objectId = 0;
+
+  const canvas = document.getElementById('gameCanvas');
+  canvas.innerHTML = '';
+  updateHUD();
+  document.getElementById('hudTimer').textContent = timeLeft;
+
+  const boosterInd = document.getElementById('boosterInd');
+  if (hasBooster) { boosterInd.classList.add('visible'); }
+  else { boosterInd.classList.remove('visible'); }
+
+  let spawnRate = 700;
+  function scheduleSpawn() {
+    if (!gameRunning) return;
+    spawnObject();
+    const elapsed = 30 - timeLeft;
+    spawnRate = Math.max(350, 700 - elapsed * 15);
+    spawnTimer = setTimeout(scheduleSpawn, spawnRate);
+  }
+  scheduleSpawn();
+
+  gameTimer = setInterval(() => {
+    timeLeft--;
+    document.getElementById('hudTimer').textContent = timeLeft;
+    if (timeLeft <= 0) endGame();
+  }, 1000);
+}
+
+function endGame() {
+  gameRunning = false;
+  clearInterval(gameTimer);
+  clearTimeout(spawnTimer);
+  hasBooster = false;
+
+  if (score > bestScore) {
+    bestScore = score;
+    localStorage.setItem('t2_best', bestScore);
+  }
+
+  const me = leaderboard.find(l => l.me);
+  if (me) { me.score = Math.max(me.score, score); me.name = _userName || 'Вы'; }
+  leaderboard.sort((a,b) => b.score - a.score);
+  const myRank = leaderboard.findIndex(l => l.me) + 1;
+
+  setTimeout(() => {
+    showScreen('resultScreen');
+    document.getElementById('finalScore').textContent = score;
+    document.getElementById('bestScore').textContent = bestScore;
+    document.getElementById('statCaught').textContent = caught;
+    document.getElementById('statCombo').textContent = maxCombo;
+    document.getElementById('statMissed').textContent = missed;
+    document.getElementById('rankPos').textContent = `#${myRank}`;
+    revealLogo();
+  }, 400);
+}
+
+// ============================================================
+// LOGO REVEAL
+// ============================================================
+function revealLogo() {
+  const grid = document.getElementById('logoGrid');
+  grid.innerHTML = '';
+
+  const cells = [];
+  for (let r = 0; r < 10; r++) {
+    for (let c = 0; c < 10; c++) {
+      const cell = document.createElement('div');
+      cell.className = 'pixel-cell';
+      const val = T2_LOGO[r][c];
+      if (val === 1) {
+        cell.style.background = 'var(--magenta)';
+        cell.style.boxShadow = '0 0 8px var(--magenta-glow)';
+      } else if (val === 2) {
+        cell.style.background = 'var(--lime)';
+        cell.style.boxShadow = '0 0 8px var(--lime-glow)';
+      } else {
+        cell.style.background = 'rgba(255,255,255,0.03)';
+      }
+      grid.appendChild(cell);
+      cells.push({ cell, val, r, c });
+    }
+  }
+
+  const totalActive = cells.filter(c => c.val > 0).length;
+  const fillRatio = Math.min(1, score / 500);
+  const cellsToReveal = Math.max(3, Math.floor(totalActive * fillRatio));
+  const activeCells = cells.filter(c => c.val > 0);
+  const emptyCells = cells.filter(c => c.val === 0);
+
+  emptyCells.forEach((c, i) => {
+    setTimeout(() => { c.cell.classList.add('revealed'); }, i * 15);
+  });
+
+  const shuffled = activeCells.sort(() => Math.random() - 0.5).slice(0, cellsToReveal);
+  shuffled.forEach((c, i) => {
+    setTimeout(() => { c.cell.classList.add('revealed'); }, emptyCells.length * 15 + i * 80);
+  });
+}
+
+// ============================================================
+// LEADERBOARD RENDER
+// ============================================================
+function renderLeaderboard() {
+  leaderboard.sort((a,b) => b.score - a.score);
+
+  const podium = document.getElementById('podium');
+  podium.innerHTML = '';
+  const top3 = leaderboard.slice(0, 3);
+  const order = [1, 0, 2];
+  const badges = ['🥇','🥈','🥉'];
+  const initials = n => n.charAt(0);
+
+  order.forEach(idx => {
+    if (!top3[idx]) return;
+    const p = top3[idx];
+    const div = document.createElement('div');
+    div.className = 'podium-item';
+    div.innerHTML = `
+      <div class="podium-badge">${badges[idx]}</div>
+      <div class="podium-avatar">${initials(p.name)}</div>
+      <div class="podium-name">${p.name}</div>
+      <div class="podium-score">${p.score}</div>
+    `;
+    podium.appendChild(div);
+  });
+
+  const list = document.getElementById('leaderList');
+  list.innerHTML = '';
+  leaderboard.slice(3).forEach((p, i) => {
+    const row = document.createElement('div');
+    row.className = `leader-row${p.me ? ' me' : ''}`;
+    row.innerHTML = `
+      <div class="leader-pos">${i + 4}</div>
+      <div class="leader-avatar-sm">${initials(p.name)}</div>
+      <div class="leader-name">${p.name}${p.t2 ? ' <span class="leader-t2-badge">T2</span>' : ''}</div>
+      <div class="leader-score-sm">${p.score}</div>
+    `;
+    list.appendChild(row);
+  });
+}
+
+// ============================================================
+// INVITE — адаптировано под MAX
+// ============================================================
+function doInvite() {
+  const appUrl = `https://max.ru/${_botNick}?startapp`;
+  const text = encodeURIComponent(`Играй со мной в T2 Catch! 🎮 ${appUrl}`);
+
+  // Шеринг через MAX
+  try {
+    window.open(`https://max.ru/:share?text=${text}`, '_blank');
+  } catch(e) {}
+
+  // Бонус за инвайт
+  hasBooster = true;
+  attempts = Math.min(attempts + 1, 5);
+  document.getElementById('attemptsLeft').textContent = attempts;
+}
+
+// ============================================================
+// EVENT LISTENERS
+// ============================================================
+document.getElementById('btnPlay').addEventListener('click', () => {
+  if (attempts <= 0) { alert('Попытки закончились! Пригласи друга, чтобы получить ещё.'); return; }
+  attempts--;
+  document.getElementById('attemptsLeft').textContent = attempts;
+  startCountdown();
+});
+
+document.getElementById('btnPlayAgain').addEventListener('click', () => {
+  if (attempts <= 0) { alert('Попытки закончились! Пригласи друга, чтобы получить ещё.'); return; }
+  attempts--;
+  document.getElementById('attemptsLeft').textContent = attempts;
+  startCountdown();
+});
+
+document.getElementById('btnInvite').addEventListener('click', doInvite);
+document.getElementById('btnInviteFromLeader').addEventListener('click', doInvite);
+
+document.getElementById('btnLeaderFromMain').addEventListener('click', () => {
+  renderLeaderboard();
+  showScreen('leaderScreen');
+});
+document.getElementById('btnLeaderFromResult').addEventListener('click', () => {
+  renderLeaderboard();
+  showScreen('leaderScreen');
+});
+document.getElementById('btnBackFromLeader').addEventListener('click', () => {
+  showScreen(previousScreen === 'leaderScreen' ? 'mainScreen' : previousScreen);
+});
+
+document.addEventListener('touchmove', e => {
+  const screen = e.target.closest('.screen.scrollable');
+  if (!screen) e.preventDefault();
+}, { passive: false });
+document.addEventListener('contextmenu', e => e.preventDefault());
+</script>
+</body>
+</html>
